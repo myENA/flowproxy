@@ -9,5 +9,5 @@ require (
 
 require (
 	github.com/mostlygeek/arp v0.0.0-20170424181311-541a2129847a
-	golang.org/x/sys v0.0.0-20190412213103-97732733099d // indirect
+	golang.org/x/sys v0.1.0 // indirect
 )
