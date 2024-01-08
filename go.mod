@@ -1,4 +1,4 @@
-module gitlab.ena.net/netflow/flowproxy
+module github.com/myENA/flowproxy
 
 go 1.21.3
 
