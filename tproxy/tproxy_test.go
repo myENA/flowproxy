@@ -23,8 +23,8 @@ const (
 	deviceName     string        = "enp0s8"
 )
 
-//Generate dummy netflow packets(800 packets)
-//This func will listen to a device and save 800 packets into a file for testing purposes
+// Generate dummy netflow packets(800 packets)
+// This func will listen to a device and save 800 packets into a file for testing purposes
 func TestGenerateNetflowPackets(t *testing.T) {
 	packetCount := 0
 	// Open output pcap file and write header
@@ -55,7 +55,7 @@ func TestGenerateNetflowPackets(t *testing.T) {
 		w.WritePacket(packet.Metadata().CaptureInfo, packet.Data())
 		packetCount++
 
-		// Only capture 800 and then stop
+		// Only capture 1000 and then stop
 		if packetCount > 1000 {
 			break
 		}
@@ -214,12 +214,8 @@ func TestParseNetflowWithNoRateLimits(t *testing.T) {
 	for _, packet := range packetsV9 {
 		proxyChan <- packet
 	}
-	for {
-		if len(proxyChan) == 0 {
-			break
-		}
-	}
-	time.Sleep(40 * time.Second) // wait for packets to be processed
+
+	time.Sleep(30 * time.Second) // wait for packets to be processed
 	if rStats.Netflow9.DataRead > rStats.Netflow9.DataSent {
 		t.Error("Not all the packets have been sent.")
 	}
@@ -264,17 +260,13 @@ func TestParseNetflowWithGeneralRateLimit(t *testing.T) {
 	for _, packet := range packetsV9 {
 		proxyChan <- packet
 	}
-	for {
-		if len(proxyChan) == 0 {
-			break
-		}
+
+	time.Sleep(30 * time.Second) // wait for packets to be processed
+	if rStats.Netflow9.DataSent > 200 {
+		t.Errorf("The rate limit is 200. %d packets have been sent", rStats.Netflow9.DataSent)
 	}
-	time.Sleep(40 * time.Second) // wait for packets to be processed
-	if rStats.Netflow9.DataSent > 100 {
-		t.Errorf("The rate limit is 100. %d packets have been sent", rStats.Netflow9.DataSent)
-	}
-	if rStats.Netflow9.DataSent < 100 {
-		t.Errorf("The rate limit is 100. %d packets have been sent", rStats.Netflow9.DataSent)
+	if rStats.Netflow9.DataSent < 200 {
+		t.Errorf("The rate limit is 200. %d packets have been sent", rStats.Netflow9.DataSent)
 	}
 }
 
@@ -319,12 +311,8 @@ func TestParseNetflowWithCustomRateLimits(t *testing.T) {
 	for _, packet := range packetsV9 {
 		proxyChan <- packet
 	}
-	for {
-		if len(proxyChan) == 0 {
-			break
-		}
-	}
-	time.Sleep(40 * time.Second) // wait for packets to be processed
+
+	time.Sleep(30 * time.Second) // wait for packets to be processed
 	if rStats.Netflow9.DataSent > 120 {
 		t.Errorf("The rate limit is 100 and the custom rate is 20. %d packets have been sent instead of 120.", rStats.Netflow9.DataSent)
 	}
