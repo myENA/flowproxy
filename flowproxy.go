@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/myENA/flowproxy/common"
 	"github.com/myENA/flowproxy/proxy"
 	"github.com/myENA/flowproxy/tproxy"
 	"os"
@@ -74,6 +75,8 @@ func main() {
 	tproxyOutfile := tproxyCmd.String("outfile", "", "file to write statistics and information to.")
 	tproxyVerbose := tproxyCmd.Bool("verbose", false, "Whether to log every flow received. "+
 		"Warning can be a lot")
+
+	common.InitCustomRateLimits("rateLimits.yaml")
 
 	// Start parsing command line args
 	if len(os.Args) < 2 {

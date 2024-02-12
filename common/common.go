@@ -6,13 +6,26 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/mostlygeek/arp"
+	"gopkg.in/yaml.v2"
 	"log"
 	"math/big"
 	"net"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 )
+
+type CustomDeviceRateLimits struct {
+	RateLimits []CustomDeviceRateLimit `yaml:"rateLimits"`
+}
+
+type CustomDeviceRateLimit struct {
+	DeviceIp  string `yaml:"deviceIp"`
+	RateLimit int    `yaml:"rateLimit"`
+}
+
+var customDeviceRateLimits CustomDeviceRateLimits
 
 func CryptoRandomNumber(max int64) int64 {
 	n, err := crand.Int(crand.Reader, big.NewInt(max))
@@ -108,4 +121,30 @@ func DarwinMACFormat(macString string) string {
 	}
 	builder.WriteString(macString[len(macString)-group:])
 	return builder.String()
+}
+
+func InitCustomRateLimits(rateLimitPath string) {
+	var customRateLimits CustomDeviceRateLimits
+	configFileName := rateLimitPath
+	source, err := os.ReadFile(configFileName)
+	if err != nil {
+		fmt.Println("failed reading custom device rate limits")
+		os.Exit(1)
+	}
+	err = yaml.Unmarshal(source, &customRateLimits)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+		fmt.Println("failed unmarshal the custom rate limits")
+		os.Exit(1)
+	}
+	customDeviceRateLimits = customRateLimits
+}
+
+func HasCustomRateLimit(ip string) (bool, int) {
+	for _, customRate := range customDeviceRateLimits.RateLimits {
+		if customRate.DeviceIp == ip {
+			return true, customRate.RateLimit
+		}
+	}
+	return false, 0
 }
