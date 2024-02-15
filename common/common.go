@@ -123,25 +123,37 @@ func DarwinMACFormat(macString string) string {
 	return builder.String()
 }
 
-func InitCustomRateLimits(rateLimitPath string) {
+func InitCustomRateLimits(rateLimitPath string) error {
 	var customRateLimits CustomDeviceRateLimits
 	configFileName := rateLimitPath
 	source, err := os.ReadFile(configFileName)
 	if err != nil {
 		fmt.Println("failed reading custom device rate limits")
-		os.Exit(1)
+		return err
 	}
 	err = yaml.Unmarshal(source, &customRateLimits)
 	if err != nil {
 		log.Fatalf("error: %v", err)
 		fmt.Println("failed unmarshal the custom rate limits")
-		os.Exit(1)
+		return err
 	}
 	customDeviceRateLimits = customRateLimits
+	return nil
 }
 
 func HasCustomRateLimit(ip string) (bool, int) {
 	for _, customRate := range customDeviceRateLimits.RateLimits {
+		if strings.HasSuffix(customRate.DeviceIp, "/24") {
+			_, ipv4Net, err := net.ParseCIDR(customRate.DeviceIp)
+			if err != nil {
+				return false, 0
+			}
+			if ipv4Net.Contains(net.ParseIP(ip)) {
+				return true, customRate.RateLimit
+			} else {
+				return false, 0
+			}
+		}
 		if customRate.DeviceIp == ip {
 			return true, customRate.RateLimit
 		}

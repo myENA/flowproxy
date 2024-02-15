@@ -28,7 +28,7 @@ const (
 func TestGenerateNetflowPackets(t *testing.T) {
 	packetCount := 0
 	// Open output pcap file and write header
-	f, _ := os.Create("netflow-dummy-packets/dummyNetflowV9Packets.pcap")
+	f, _ := os.Create("netflow-dummy-packets/dummyNetflowV9PacketsWithOptions.pcap")
 	w := pcapgo.NewWriter(f)
 	w.WriteFileHeader(1024, layers.LinkTypeEthernet)
 	defer f.Close()
@@ -67,7 +67,7 @@ func GetGeneratedNetflowPackets(version int) ([]gopacket.Packet, error) {
 	var handle *pcap.Handle
 	var err error
 	if version == 9 {
-		handle, err = pcap.OpenOffline("netflow-dummy-packets/dummyNetflowV9Packets.pcap")
+		handle, err = pcap.OpenOffline("netflow-dummy-packets/dummyNetflowV9PacketsWithOptions.pcap")
 	} else {
 		handle, err = pcap.OpenOffline("netflow-dummy-packets/dummyNetflowV5Packets.pcap")
 	}
@@ -303,13 +303,25 @@ func TestParseNetflowWithCustomRateLimits(t *testing.T) {
 		t.Error("Failed gettting generated netflow packets!")
 	}
 
-	common.InitCustomRateLimits("netflow-dummy-packets/rateLimitsTestData.yaml")
+	workerChans := make([]chan gopacket.Packet, 10)
+	workerChan := make(chan gopacket.Packet, bufferSize)
+	workerChans[1] = workerChan
+	initErr := common.InitCustomRateLimits("netflow-dummy-packets/rateLimitsTestData.yaml")
+	if initErr != nil {
+		t.Error("Failed to load the custom rate limits in order to run this test")
+	}
 
 	wg.Add(1)
 	go parseNetflow(ctx, wg, proxyChan, dataChan, &rStats, 100, false)
+	wg.Add(1)
+	go replicator(ctx, wg, dataChan, workerChans, false)
 
 	for _, packet := range packetsV9 {
 		proxyChan <- packet
+	}
+
+	if len(dataChan) != len(workerChans[1]) {
+		t.Error("Replicator failed to send all the packets to the worker")
 	}
 
 	time.Sleep(30 * time.Second) // wait for packets to be processed

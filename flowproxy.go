@@ -76,7 +76,11 @@ func main() {
 	tproxyVerbose := tproxyCmd.Bool("verbose", false, "Whether to log every flow received. "+
 		"Warning can be a lot")
 
-	common.InitCustomRateLimits("rateLimits.yaml")
+	initCustomRatesErr := common.InitCustomRateLimits("rateLimits.yaml")
+	if initCustomRatesErr != nil {
+		fmt.Println("failed to load the custom rate limits")
+		os.Exit(1)
+	}
 
 	// Start parsing command line args
 	if len(os.Args) < 2 {
