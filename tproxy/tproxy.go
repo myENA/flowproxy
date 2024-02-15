@@ -264,6 +264,9 @@ func parseNetflow(ctx context.Context, wg *sync.WaitGroup, proxyChan <-chan gopa
 					srcIP = ip.SrcIP
 				}
 			}
+
+			hasCustomRateLimit, customRateLimit := common.HasCustomRateLimit(srcIP.String())
+
 			udpLayer := packet.Layer(layers.LayerTypeUDP)
 			payload := udpLayer.LayerPayload()
 			ok9, err9 := netflow.IsValidNetFlow(payload, 9)
@@ -275,7 +278,9 @@ func parseNetflow(ctx context.Context, wg *sync.WaitGroup, proxyChan <-chan gopa
 				deviceManager.SeenDevice(srcIP.String())
 			} else {
 				deviceManager.AddDevice(srcIP.String())
-				if rateLimit {
+				if hasCustomRateLimit {
+					deviceManager.SetSampleRate(srcIP.String(), customRateLimit)
+				} else if rateLimit {
 					deviceManager.SetSampleRate(srcIP.String(), rate)
 				}
 			}
@@ -300,7 +305,12 @@ func parseNetflow(ctx context.Context, wg *sync.WaitGroup, proxyChan <-chan gopa
 					dataChan <- packet
 					continue
 				}
-				if rateLimit {
+				if hasCustomRateLimit {
+					if deviceManager.CheckSampleRate(srcIP.String(), int(dataCount)) {
+						rStats.Netflow9.DataSent = rStats.Netflow9.DataSent + dataCount
+						dataChan <- packet
+					}
+				} else if rateLimit {
 					if deviceManager.CheckSampleRate(srcIP.String(), int(dataCount)) {
 						rStats.Netflow9.DataSent = rStats.Netflow9.DataSent + dataCount
 						dataChan <- packet
