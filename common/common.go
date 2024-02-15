@@ -146,12 +146,11 @@ func HasCustomRateLimit(ip string) (bool, int) {
 		if strings.HasSuffix(customRate.DeviceIp, "/24") {
 			_, ipv4Net, err := net.ParseCIDR(customRate.DeviceIp)
 			if err != nil {
-				return false, 0
+				fmt.Println("Failed cidr parsing from rateLimits file: %s", err)
+				continue
 			}
 			if ipv4Net.Contains(net.ParseIP(ip)) {
 				return true, customRate.RateLimit
-			} else {
-				return false, 0
 			}
 		}
 		if customRate.DeviceIp == ip {
